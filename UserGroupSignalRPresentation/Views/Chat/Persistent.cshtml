@@ -1,0 +1,69 @@
+﻿@{
+    ViewBag.Title = "Index";
+}
+
+@section scripts
+{
+    <script src="~/Scripts/jquery-1.8.2.min.js" type="text/javascript"></script>
+    <script src="~/Scripts/jquery.signalR-1.0.1.min.js" type="text/javascript"></script>
+    <script>
+        (function ($) {
+            // Prompt for the user name
+            var username = prompt("What's your name?");
+
+            $('#username').html(username);
+
+            // Create a connection reference to the chat connection
+            var connection = $.connection('/chatcon');
+
+            // Method to be called when receiving data. Use the action to determine what is happening.
+            connection.received(function(data) {
+                var message;
+                var html;
+                
+                if (data.action == "messages") {
+                    var messages = data.data;
+                    html = '';
+                    for (var i = 0; i < messages.length; i++) {
+                        message = messages[i];
+                        html += getMessageHtml(message);
+                    }
+
+                    $('#messages').html(html);
+                } else if (data.action == "messageSent") {
+                    message = data.data;
+                    html = getMessageHtml(message);
+                    $('#messages').append(html);
+                }
+                console.log(data);
+            });
+
+            // Establish a connection to the server, and when it connects, send a message indicating that
+            // we want all messages.
+            connection.start().done(function() {
+                console.log('connected');
+                connection.send(JSON.stringify({ action: 'getMessages' }));
+            });
+
+            // When we want to send a message, we need to create a JSON object that can be used on the server to determine what was
+            // sent.
+            $('#send').click(function(e) {
+                e.preventDefault();
+                var data = JSON.stringify({ action: 'sendMessage', message: { username: username, messageText: $('#message').val() } });
+                connection.send(data);
+                $('#message').val('');
+            });
+
+            var getMessageHtml = function(message) {
+                return '<div><span>' + message.Username + ' (' + message.SentOn + '):</span><span>' + message.Message + '</span></div>';
+            };
+
+        })($);
+    </script>
+}
+<h2>Index</h2>
+
+<div id="messages"></div>
+<span id="username"></span>
+<input id="message" /><br />
+<button id="send">Send</button>

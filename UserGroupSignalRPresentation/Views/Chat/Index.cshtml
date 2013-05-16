@@ -1,0 +1,67 @@
+﻿@{
+    ViewBag.Title = "Index";
+}
+
+@section scripts
+{
+    <script src="~/Scripts/jquery.signalR-1.0.1.min.js" type="text/javascript"></script>
+    <script src="~/signalr/hubs"></script>
+    <script>
+        (function ($) {
+            // Prompt for the user name
+            var username = prompt("What's your name?");
+
+            $('#username').html(username);
+
+            // Set up the chathub reference
+            var chatHub = $.connection.chatHub;
+
+            // When we send a message, we want to call the SendMessage method on the server.
+            // On completion, we clear the message from the text box. Note that we are able to use
+            // Javascript casing to call the method.
+            $('#send').click(function (e) {
+                e.preventDefault();
+                chatHub.server.sendMessage(username, $('#message').val()).always(function () {
+                    $('#message').val('');
+                });
+            });
+
+            // Define a method on the client that can be called from the server to output a list of messages.
+            chatHub.client.messages = function (messages) {
+                var html = '';
+                for (var i = 0; i < messages.length; i++) {
+                    var message = messages[i];
+
+                    html += getMessageHtml(message);
+                }
+
+                $('#messages').html(html);
+            };
+
+            // Define a method on the client that the server can call to indicate that a message was sent.
+            chatHub.client.messageSent = function (message) {
+                var html = getMessageHtml(message);
+                $('#messages').append(html);
+            };
+
+            // Start the connection to the hubs and ask the server for the list of messages.
+            $.connection.hub.start()
+                .done(function () {
+                    chatHub.server.getMessages();
+                })
+                .fail(function () {
+                });
+
+            var getMessageHtml = function (message) {
+                return '<div><span>' + message.Username + ' (' + message.SentOn + '):</span><span>' + message.Message + '</span></div>';
+            };
+
+        })($);
+    </script>
+}
+<h2>Index</h2>
+
+<div id="messages"></div>
+<span id="username"></span>
+<input id="message" /><br />
+<button id="send">Send</button>
